@@ -41,6 +41,7 @@ class ImageReceive_t:
         self._socket.connect(socket)  # 连接到指定地址
         self._socket.setsockopt_string(zmq.SUBSCRIBE, "")  # 订阅所有消息（这一行是关键）
         self.shm=None
+        self.shm_key=None
     def update(self, image: np.ndarray, content: dict = None):
         """
         将共享内存图像转化成cv2图像
@@ -48,10 +49,6 @@ class ImageReceive_t:
         :param content: 附加的内容，如时间戳、坐标系等
         """
         #检查是否上线
-        if self._socket.poll(0) == 0:
-            time.sleep(0.5)
-            print("socket not ready")
-            return
         # 接收图像的消息
         message = self._socket.recv_json()
         shm_key = message['shm_key']
@@ -59,9 +56,14 @@ class ImageReceive_t:
         dtype = np.dtype(message['dtype'])
         print("shm_key:", shm_key)
         # 读取共享内存（零拷贝）
-        shm_image = shm.SharedMemory(name=shm_key)
-        image[:] = np.ndarray(shape, dtype=dtype, buffer=shm_image.buf)  # 用共享内存的数据替换掉图像
-        
+        # shm_image = shm.SharedMemory(name=shm_key)
+        if image.shape != shape:
+            image.resize(shape, refcheck=False)
+        if self.shm_key != shm_key:
+            self.shm = shm.SharedMemory(name=shm_key)
+            self.shm_key = shm_key
+        # image[:] = np.ndarray(shape, dtype=dtype, buffer=shm_image.buf)  # 用共享内存的数据替换掉图像
+        image[:] = np.ndarray(shape, dtype=dtype, buffer=self.shm.buf)  # 用共享内存的数据替换掉图像
         # 显示图像
         cv2.imshow("image", image) 
         cv2.waitKey(1) 
@@ -75,7 +77,7 @@ def main():
     receive = ImageReceive_t()
     while True:
         # 创建一个空的图像对象，这里用一个全黑的图像作为示例
-        image = np.zeros((480, 640, 3), dtype=np.uint8)  # 假设图像大小为480x640，3通道（RGB）
+        image = np.zeros((1, 1, 3), dtype=np.uint8)  # 假设图像大小为480x640，3通道（RGB）
         receive.update(image)  # 更新图像为共享内存中的内容
         
 if __name__ == "__main__":
