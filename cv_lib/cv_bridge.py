@@ -35,13 +35,14 @@ class ImageReceive_t:
     将共享内存图像转化成cv2图像
     :param socket: ZeroMQ连接地址
     """
-    def __init__(self, socket="tcp://localhost:5555"):
+    def __init__(self, socket="tcp://localhost:5555",print_latency=False):
         self._context = zmq.Context()
         self._socket = self._context.socket(zmq.SUB)
         self._socket.connect(socket)  # 连接到指定地址
         self._socket.setsockopt_string(zmq.SUBSCRIBE, "")  # 订阅所有消息（这一行是关键）
         self.shm=None
         self.shm_key=None
+        self.print_latency=print_latency
     def update(self, image: np.ndarray, content: dict = None):
         """
         将共享内存图像转化成cv2图像
@@ -65,6 +66,19 @@ class ImageReceive_t:
         # image[:] = np.ndarray(shape, dtype=dtype, buffer=shm_image.buf)  # 用共享内存的数据替换掉图像
         image[:] = np.ndarray(shape, dtype=dtype, buffer=self.shm.buf)  # 用共享内存的数据替换掉图像
         # 显示图像
+        if self.print_latency:
+            #每隔60帧打印一次延迟
+            if not hasattr(self, 'cnt'):
+                self.cnt=0
+            self.cnt+=1
+            if self.cnt>60:
+                now_time = time.time()
+                start_time= message['timestamp']
+                #转化成毫秒
+                latency = (now_time-start_time)*1000
+                #打印小数点后两位
+                print(f"Latency: {latency:.2f} ms")
+                self.cnt=0
         cv2.imshow("image", image) 
         cv2.waitKey(1) 
     def __del__(self):
@@ -74,7 +88,7 @@ class ImageReceive_t:
         self._context.term()
             
 def main():
-    receive = ImageReceive_t()
+    receive = ImageReceive_t(print_latency=True)
     while True:
         # 创建一个空的图像对象，这里用一个全黑的图像作为示例
         image = np.zeros((1, 1, 3), dtype=np.uint8)  # 假设图像大小为480x640，3通道（RGB）
