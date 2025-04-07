@@ -106,20 +106,6 @@ class Aruco:
                     self._draw_marker(image, corner.reshape((4, 2)), marker_id)
 
         return image if if_draw else results
-
-            # 保留原始 ids 的二维结构 (n, 1)
-            for i in range(len(ids)):
-                marker_id = int(ids[i][0])  # 提取原始数值
-                corner = corners[i].reshape((4, 2))
-                (topLeft, _, _, bottomRight) = corner
-                cX = int((topLeft[0] + bottomRight[0]) / 2)
-                cY = int((topLeft[1] + bottomRight[1]) / 2)
-                results.append({"id": marker_id, "cx": cX, "cy": cY})
-
-                if if_draw:
-                    self._draw_marker(image, corner, marker_id)
-
-        return image if if_draw else results
     def update(self, image:np.ndarray,content:dict=None):
         """
         更新图像并检测 ArUco 标记
