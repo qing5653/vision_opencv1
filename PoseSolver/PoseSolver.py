@@ -2,13 +2,15 @@ import cv2
 import numpy as np
 
 class PoseSolver:
-    def __init__(self, camera_matrix, dist_coeffs, marker_length, marker_width=None):
+    def __init__(self, camera_matrix, dist_coeffs:np.ndarray, marker_length:np.ndarray, marker_width=None):
         """
         :param camera_matrix: 相机内参矩阵 (3x3)
         :param dist_coeffs: 畸变系数 (1x5)
         :param marker_length: 矩形标记的实际物理长度(X轴方向,单位:米)
         :param marker_width: 矩形标记的实际物理宽度(Y轴方向,单位:米。默认为None,表示使用正方形)
         """
+        if type(camera_matrix) is not np.ndarray or type(dist_coeffs) is not np.ndarray:
+            raise TypeError("camera_matrix和dist_coeffs必须是numpy数组")
         self.camera_matrix = camera_matrix
         self.dist_coeffs = dist_coeffs
         self.marker_length = marker_length
@@ -69,6 +71,8 @@ class PoseSolver:
     def update(self,image:np.ndarray,content:dict):
         '读取信息'
         corners=[]
+        #创建pnp字典
+        content["pnp"]={}
         if "corners" in content:
             if len(content["corners"])==0:
                 return
@@ -80,8 +84,5 @@ class PoseSolver:
             return
         rvec,tvec=self.solve_pose(corners)
         self.draw_axis(image,rvec,tvec)
-        #创建pnp字典
-        if "pnp" not in content:
-            content["pnp"]={}
         content["pnp"]["rvec"]=rvec
         content["pnp"]["tvec"]=tvec
