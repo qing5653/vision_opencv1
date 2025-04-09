@@ -29,6 +29,8 @@ RUN curl -L github.com/oh-my-fish/oh-my-fish/raw/master/bin/install | sudo tee i
     && sudo rm install_omf 
 COPY packages/fish /home/${USERNAME}/.config/fish
 #安装处理依赖与通信库
+USER root
+RUN pip uninstall opencv-python opencv-python-headless -y 
 USER $USERNAME
 RUN pip install  opencv-python  imutils pyzmq
 # RUN apt-get update \
