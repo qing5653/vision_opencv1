@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 
 class PoseSolver:
-    def __init__(self, camera_matrix, dist_coeffs:np.ndarray, marker_length:np.ndarray, marker_width=None):
+    def __init__(self, camera_matrix, dist_coeffs:np.ndarray, marker_length:np.ndarray, marker_width=None,print_result=False):
         """
         :param camera_matrix: 相机内参矩阵 (3x3)
         :param dist_coeffs: 畸变系数 (1x5)
@@ -15,7 +15,7 @@ class PoseSolver:
         self.dist_coeffs = dist_coeffs
         self.marker_length = marker_length
         self.marker_width = marker_width if marker_width is not None else marker_length
-
+        self.print_result=print_result
         # 定义矩形的3D角点（以中心为原点，Z=0平面）
         self.obj_points = np.array([
             [-self.marker_length/2,  self.marker_width/2, 0],  # 左上角
@@ -93,3 +93,10 @@ class PoseSolver:
         self.draw_axis(image,rvec,tvec)
         content["pnp"]["rvec"]=rvec
         content["pnp"]["tvec"]=tvec
+        if self.print_result:
+            rotation_matrix, _ = cv2.Rodrigues(rvec)
+            sy = np.sqrt(rotation_matrix[0,0] ** 2 + rotation_matrix[1,0] ** 2)
+            pitch = np.arctan2(rotation_matrix[2,1], rotation_matrix[2,2])  # X轴旋转角
+            yaw = np.arctan2(-rotation_matrix[2,0], sy)                     # Y轴旋转角
+            roll = np.arctan2(rotation_matrix[1,0], rotation_matrix[0,0])   # Z轴旋转角
+            print(f"Pitch: {np.degrees(pitch):.1f}°, Yaw: {np.degrees(yaw):.1f}°, Roll: {np.degrees(roll):.1f}°")
