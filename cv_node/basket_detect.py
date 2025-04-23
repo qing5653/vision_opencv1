@@ -10,6 +10,8 @@ from cv_lib.cv_bridge import ImagePublish_t,ImageReceive_t
 from PoseSolver.Aruco import Aruco
 from PoseSolver.PoseSolver import PoseSolver
 from YOLOv11.yolo_lib import MyYOLO
+from cv_lib.cv_cornerdetection import OpenCVObjectDetector
+from cv_lib.cv_cornerdetection import BRISKCornerDetector
 def main():
     # camera_matix=[600.574780 ,0.000000 ,440.893136,0.000000 ,600.705625 ,235.248930,0.000000 ,0.000000 ,1.000000]
     camera_martix=np.array([[606.634521484375, 0, 433.2264404296875,],
