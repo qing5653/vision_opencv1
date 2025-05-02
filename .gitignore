@@ -19,3 +19,9 @@ install/
 devel/
 .vscode/start_program
 *.pyc
+basket_seg/labels.txt
+
+*.json
+*.jpg
+
+*.txt
