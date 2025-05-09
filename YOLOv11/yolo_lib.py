@@ -2,10 +2,11 @@ from ultralytics import YOLO
 import numpy as np
 import cv2
 from pathlib import Path
+
 class MyYOLO():
-    def __init__(self, model_path,show=False,use_intel=False):
+    def __init__(self, model_path, show=False, use_intel=False):
         self.model = YOLO(model_path)
-        self.show=show
+        self.show = show
         if use_intel:
             import openvino.runtime as ov
             from openvino.runtime import Core
@@ -14,28 +15,58 @@ class MyYOLO():
             config = {hints.performance_mode: hints.PerformanceMode.THROUGHPUT}
             core = Core()
             model = core.read_model(model_path)
-            quantized_seg_compiled_model  = core.compile_model(model,config=config)
+            quantized_seg_compiled_model = core.compile_model(model, config=config)
             if self.model.predictor is None:
                 custom = {"conf": 0.25, "batch": 1, "save": False, "mode": "predict"}  # method defaults
                 args = {**self.model.overrides, **custom}
                 self.model.predictor = self.model._smart_load("predictor")(overrides=args, _callbacks=self.model.callbacks)
                 self.model.predictor.setup_model(model=self.model.model)
             self.model.predictor.model.ov_compiled_model = quantized_seg_compiled_model
-    def update(self,image:np.ndarray,content:dict):
-        results=self.model(image)
-        # 把结果显示到图片上
-        #创建一个空的图像对象
+
+    def update(self, image: np.ndarray, content: dict):
+        results = self.model(image)
         segmentation_mask = np.zeros_like(image, dtype=np.uint8)
-        for i,result in enumerate(results):
+        content["corners"] = []  # 初始化角点存储列表
+
+        for result in results:
             if result.masks is None:
                 continue
-            for j,mask in enumerate(result.masks.xy):
-                mask=np.array(mask,dtype=np.int32)
-                segmentation_mask=cv2.fillPoly(segmentation_mask, [mask], (0, 255, 0))
-        if self.show:
-            # cv2.addWeighted(image, 1, segmentation_mask, 0.7, 0, image)  # 将修改写回原图像
-            result = results[0]
-            image_result= result.plot()
-            #将image_result内容给image
-            image[:]=image_result
             
+            # 获取当前目标的置信度（取第一个检测框的置信度）
+            conf = result.boxes.conf[0].item() if len(result.boxes.conf) > 0 else 0.0
+            
+            # 只处理置信度>=0.9的目标
+            if conf >= 0.9:
+                for mask in result.masks.xy:
+                    mask = np.array(mask, dtype=np.int32)
+                    
+                    # 计算边界角点
+                    min_x, min_y = np.min(mask, axis=0)
+                    max_x, max_y = np.max(mask, axis=0)
+                    corners = np.array([
+                        [min_x, min_y],  # 左上
+                        [max_x, min_y],  # 右上
+                        [max_x, max_y],  # 右下
+                        [min_x, max_y]   # 左下
+                    ])
+                    
+                    # 存储角点和置信度
+                    content["corners"].append({
+                        "corners": corners,
+                        "confidence": conf
+                    })
+                    
+                    # 绘制分割掩码
+                    segmentation_mask = cv2.fillPoly(segmentation_mask, [mask], (0, 255, 0))
+        
+        # 可视化结果
+        if self.show:
+            result = results[0]
+            image_result = result.plot()
+            
+            # 在可视化图像上标记高置信度目标的角点
+            for corner_data in content["corners"]:
+                for pt in corner_data["corners"]:
+                    cv2.circle(image_result, tuple(pt.astype(int)), 5, (0, 0, 255), -1)
+            
+            image[:] = image_result
