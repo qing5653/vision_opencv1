@@ -28,8 +28,8 @@ def main():
     pipe.append(MyYOLO("/home/Elaina/yolo/best.pt", show=True))
     pipe.append(ImagePublish_t("yolo"))
     
-    # 添加位姿解算器
-    pose_solver = PoseSolver(camera_matrix, dist_coeffs, marker_length=0.1)  # 假设标记长度为0.1米
+    # 添加位姿解算器，设置print_result为True以打印位姿信息
+    pose_solver = PoseSolver(camera_matrix, dist_coeffs, marker_length=0.1, print_result=True)  # 假设标记长度为0.1米
     
     content = {}
     print_time = True
@@ -58,32 +58,30 @@ def main():
             # 如果有检测到目标，进行位姿解算
             if "corners" in content and len(content["corners"]) > 0:
                 print("\n" + "="*50)
-                print(f"检测到 {len(content['corners'])} 个目标:")
+                print(f"检测到 {len(content['corners'])} 个目标，开始位姿解算...")
                 
-                for i, corner_data in enumerate(content["corners"]):
-                    corners = corner_data["corners"]
-                    conf = corner_data["confidence"]
+                # 使用PoseSolver的update方法处理所有目标
+                pose_solver.update(image, content)
+                
+                # 打印位姿信息
+                if "pnp" in content and content["pnp"]:
+                    # 注意：根据当前PoseSolver实现，content["pnp"]是单个字典，不是列表
+                    pose_info = content["pnp"]
                     
-                    try:
-                        # 位姿解算
-                        rvec, tvec = pose_solver.solve_pose(corners)
-                        pose_solver.draw_axis(image, rvec, tvec)
+                    for i, corner_data in enumerate(content["corners"]):
+                        conf = corner_data["confidence"]
                         
-                        # 打印结果
-                        print(f"\n目标 {i+1} (置信度: {conf:.2f}):")
-                        print(f"角点坐标:")
-                        for j, pt in enumerate(corners):
-                            print(f"  点{j+1}: ({pt[0]:.1f}, {pt[1]:.1f})")
-                        print(f"位置向量: [{tvec[0][0]:.3f}, {tvec[1][0]:.3f}, {tvec[2][0]:.3f}]")
-                    
-                    except Exception as e:
-                        print(f"目标 {i+1} 位姿解算失败: {str(e)}")
-                        continue
+                        # 只处理第一个目标（因为当前PoseSolver只处理第一个）
+                        if i == 0:
+                            print(f"\n目标 {i+1} (置信度: {conf:.2f}):")
+                            print(f"  Yaw: {pose_info['yaw']:.1f}°, Pitch: {pose_info['pitch']:.1f}°, Roll: {pose_info['roll']:.1f}°")
+                            print(f"  位置: [{pose_info['tvec'][0][0]:.3f}, {pose_info['tvec'][1][0]:.3f}, {pose_info['tvec'][2][0]:.3f}]m")
+                            print(f"  距离: {pose_info['distance']:.3f}m")
+                        else:
+                            print(f"\n目标 {i+1} (置信度: {conf:.2f}):")
+                            print("  位姿未计算（当前只处理第一个目标）")
                 
                 print("="*50 + "\n")
-                
-                # 清空当前帧数据
-                content["corners"] = []
             
             # 显示结果
             cv2.imshow("Detection Result", image)
@@ -97,4 +95,4 @@ def main():
         print("程序结束")
 
 if __name__ == "__main__":
-    main()
+    main()    
