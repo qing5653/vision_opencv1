@@ -47,13 +47,16 @@ class MyYOLO():
                         if len(mask_points) < 4:
                             continue
 
+                        # 后处理掩膜
+                        processed_points = self._postprocess_mask(mask_points, image.shape[:2])
+                        
                         # 使用优化的角点检测方法
-                        final_corners = self._optimized_corner_detection(mask_points, image.shape[:2])
+                        final_corners = self._optimized_corner_detection(processed_points, image.shape[:2])
 
                         content["corners"].append({
                             "corners": final_corners,
                             "confidence": conf,
-                            "raw_points": mask_points
+                            "raw_points": processed_points
                         })
                     except Exception as e:
                         print(f"角点检测出错: {str(e)}")
@@ -62,6 +65,35 @@ class MyYOLO():
         # 可视化结果
         if self.show and len(results) > 0:
             self._visualize_results(results[0], image, content)
+
+    def _postprocess_mask(self, mask_points, image_shape):
+        """对预测掩膜进行后处理，提升质量"""
+        # 创建掩膜
+        mask_img = np.zeros(image_shape[:2], dtype=np.uint8)
+        cv2.fillPoly(mask_img, [mask_points.astype(np.int32)], 255)
+        
+        # 平滑处理 - 可调整高斯核大小
+        mask_img = cv2.GaussianBlur(mask_img, (5, 5), 0)
+        
+        # 形态学操作 - 可调整核大小和迭代次数
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+        mask_img = cv2.morphologyEx(mask_img, cv2.MORPH_OPEN, kernel, iterations=1)
+        mask_img = cv2.morphologyEx(mask_img, cv2.MORPH_CLOSE, kernel, iterations=1)
+        
+        # 查找轮廓并优化
+        contours, _ = cv2.findContours(mask_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        if not contours:
+            return mask_points  # 返回原始点作为后备
+        
+        # 获取最大轮廓
+        largest_contour = max(contours, key=cv2.contourArea)
+        
+        # 多边形逼近 - 可调整epsilon值
+        epsilon = 0.01 * cv2.arcLength(largest_contour, True)
+        approx = cv2.approxPolyDP(largest_contour, epsilon, True)
+        
+        # 返回优化后的轮廓点
+        return approx.reshape(-1, 2).astype(np.float32)
 
     def _optimized_corner_detection(self, points: np.ndarray, image_shape) -> np.ndarray:
         """优化的角点检测方法，结合轮廓分析和透视变换原理"""
@@ -158,3 +190,25 @@ class MyYOLO():
             image[:] = image_result
         except Exception as e:
             print(f"可视化出错: {str(e)}")
+
+
+# 使用示例
+if __name__ == "__main__":
+    # 初始化模型
+    model = MyYOLO("yolov8n-seg.pt", show=True)
+    
+    # 读取测试图像
+    image = cv2.imread("test.jpg")
+    if image is None:
+        print("无法读取测试图像，请确保图像路径正确")
+    else:
+        # 创建内容字典
+        content = {"corners": []}
+        
+        # 处理图像
+        model.update(image, content)
+        
+        # 显示结果
+        cv2.imshow("YOLO Segmentation", image)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()    
