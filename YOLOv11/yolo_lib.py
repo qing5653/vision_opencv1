@@ -2,12 +2,14 @@ from ultralytics import YOLO
 import numpy as np
 import cv2
 from pathlib import Path
+from cv_mask.cv_mask import MaskProcessor
 
-
-class MyYOLO():
+class MyYOLO:
     def __init__(self, model_path, show=False, use_intel=False):
         self.model = YOLO(model_path)
         self.show = show
+        self.mask_processor = MaskProcessor()  # 实例化掩膜处理器
+        
         if use_intel:
             # OpenVINO 加速部分（若无需加速可忽略）
             import openvino.runtime as ov
@@ -45,15 +47,16 @@ class MyYOLO():
 
         # 处理每个有效掩膜
         for mask_info in valid_masks:
-            processed_points = self._postprocess_mask(mask_info["mask"], image.shape[:2])
+            # 使用独立的掩膜处理器进行后处理
+            processed_points = self.mask_processor.postprocess_mask(mask_info["mask"], image.shape[:2])
             contour = processed_points.astype(np.int32).reshape(-1, 1, 2)
-            approx_polygon = self._fit_polygon(contour, epsilon)
+            approx_polygon = self.mask_processor.fit_polygon(contour, epsilon)
             
             # 保存中间结果（调试用）
             self._save_intermediate_results(content, mask_info, contour, approx_polygon)
             
             # 提取并筛选角点
-            corner_points = self._extract_corner_points(approx_polygon, mask_info["confidence"])
+            corner_points = self.mask_processor.extract_corner_points(approx_polygon, mask_info["confidence"])
             if corner_points is None:
                 continue  # 跳过顶点数不足的情况
             
@@ -84,67 +87,6 @@ class MyYOLO():
                 except Exception as e:
                     print(f"掩膜筛选错误: {str(e)}")
         return valid_masks
-
-    def _postprocess_mask(self, mask_points, image_shape):
-        """对掩膜进行后处理（平滑、形态学操作）"""
-        mask_img = np.zeros(image_shape[:2], dtype=np.uint8)
-        cv2.fillPoly(mask_img, [mask_points.astype(np.int32)], 255)
-        mask_img = cv2.GaussianBlur(mask_img, (5, 5), 0)
-        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
-        mask_img = cv2.morphologyEx(mask_img, cv2.MORPH_OPEN, kernel, iterations=1)
-        mask_img = cv2.morphologyEx(mask_img, cv2.MORPH_CLOSE, kernel, iterations=1)
-        contours, _ = cv2.findContours(mask_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        return max(contours, key=cv2.contourArea).reshape(-1, 2).astype(np.float32) if contours else mask_points
-
-    def _fit_polygon(self, contour, epsilon):
-        """多边形拟合"""
-        perimeter = cv2.arcLength(contour, True)
-        return cv2.approxPolyDP(contour, epsilon * perimeter, True).reshape(-1, 2)
-
-    def _extract_corner_points(self, approx_polygon, confidence):
-        """从多边形中提取4个角点（处理4或5个顶点的情况）"""
-        vertex_count = len(approx_polygon)
-        if vertex_count not in [4, 5]:
-            return None  # 只处理4或5个顶点的情况
-        
-        corner_points = approx_polygon.tolist()
-        if vertex_count == 5:
-            try:
-                selected_points = self._select_four_corners(corner_points)
-            except Exception as e:
-                print(f"角点筛选错误: {str(e)}")
-                return None
-        else:
-            selected_points = corner_points
-        
-        # 转换为 (4,2) 的 numpy 数组，并确保顺序正确
-        try:
-            ordered_points = self._order_corners(selected_points)
-            return np.array(ordered_points, dtype=np.float32).reshape(-1, 2)
-        except Exception as e:
-            print(f"角点排序错误: {str(e)}")
-            return None
-
-    def _select_four_corners(self, points):
-        """从5个点中筛选出4个角点（基于角度差最大间隔法）"""
-        center = np.mean(points, axis=0)
-        angles = [(np.arctan2(p[1]-center[1], p[0]-center[0]), p) for p in points]
-        angles.sort(key=lambda x: x[0])
-        angle_diffs = [( (angles[(i+1)%5][0] - angles[i][0]) % (2*np.pi), i) for i in range(5)]
-        max_diff_idx = max(angle_diffs, key=lambda x: x[0])[1]
-        remaining_indices = [(max_diff_idx + i) % 5 for i in range(1, 5)]
-        return [angles[i][1] for i in remaining_indices]
-
-    def _order_corners(self, points):
-        """将4个角点排序为左上、右上、右下、左下"""
-        points = np.array(points)
-        sum_xy = points[:, 0] + points[:, 1]
-        diff_xy = points[:, 0] - points[:, 1]
-        top_left = points[np.argmin(sum_xy)]
-        top_right = points[np.argmax(diff_xy)]
-        bottom_right = points[np.argmax(sum_xy)]
-        bottom_left = points[np.argmin(diff_xy)]
-        return [top_left, top_right, bottom_right, bottom_left]
 
     def _save_intermediate_results(self, content, mask_info, contour, approx_polygon):
         """保存中间结果（用于调试和可视化）"""
