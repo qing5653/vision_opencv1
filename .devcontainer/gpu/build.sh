@@ -8,7 +8,7 @@ PARENT_DIR="${SCRIPT_DIR%/*}"
 TAG="yolo-gpu"
 
 # 从外部传入的 IMAGE_REPO（格式：ghcr.io/user/repo 或 docker.io/user/repo）
-IMAGE_REPO=${IMAGE_REPO:-nagisa1201/commonimages}
+IMAGE_REPO=${IMAGE_REPO:-yc-dlan/rc2026}
 
 # 组合完整镜像名
 IMAGE="$IMAGE_REPO:$TAG"

@@ -11,7 +11,7 @@ ENV PYTHONUNBUFFERED=1 \
     OMP_NUM_THREADS=1 \
     TF_CPP_MIN_LOG_LEVEL=3
 
-ARG USERNAME=Nagisa
+ARG USERNAME=yc-dlan
 ARG USER_UID=1000
 ARG USER_GID=$USER_UID
 ARG GROUP_NAME=wheel
@@ -35,7 +35,7 @@ RUN groupadd --gid $USER_GID ${GROUP_NAME} && \
     echo "$USERNAME:password" | chpasswd && \
     usermod -aG ${GROUP_NAME} $USERNAME && \
     echo "%${GROUP_NAME} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
-    chown $USERNAME:$GROUP_NAME /home/$USERNAME/.bashrc
+    chown $USERNAME:$GROUP_NAME /home/$USERNAME/.bashrc 
 
 # 创建存放源码的目录并设置权限
 RUN mkdir -p /home/${USERNAME}/packages && \
@@ -43,7 +43,7 @@ RUN mkdir -p /home/${USERNAME}/packages && \
 
 # 切换到目标目录，拉取Ultralytics源码
 WORKDIR /home/${USERNAME}/packages
-# 拉取官方源码到当前目录（/home/Nagisa/packages）
+# 拉取官方源码到当前目录（/home/yc-dlan/packages）
 RUN git clone https://github.com/ultralytics/ultralytics.git 
 WORKDIR /home/${USERNAME}/packages/ultralytics
 # 修改配置文件（路径已变为当前目录）

@@ -4,9 +4,8 @@ services:
     # build:
     #   context: ..
     #   dockerfile: .devcontainer/Dockerfile
-    # image: elaina/yolo_image
-    image: elainasuki/rc2025:yolo-ros
-    container_name: yolo_container
+    image: yc-dlan/rc2026:yolo-ros #cpu镜像
+    container_name: yolo_container_cpu
     environment:
       - DISPLAY=${DISPLAY}
       - NVIDIA_VISIBLE_DEVICES=all
@@ -23,6 +22,6 @@ services:
     privileged: true
     stdin_open: true
     tty: true
-    user: "Elaina"
+    user: "Elaina" 
     # runtime: "nvidia"
     working_dir: "/home/Elaina/yolo" # 指定默认工作目录

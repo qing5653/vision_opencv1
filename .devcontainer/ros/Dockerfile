@@ -8,7 +8,18 @@ ARG USER_GID=$USER_UID
 ARG GROUP_NAME=wheel
 RUN apt-get update \
     && apt-get install -y  sudo vim nautilus 
+
 USER ${USERNAME}
+
+# 安装fish插件（切换到普通用户）
+RUN curl -L https://github.com/oh-my-fish/oh-my-fish/raw/master/bin/install | sudo tee install_omf > /dev/null && \
+    fish install_omf --noninteractive && \
+    fish -c "omf install bass" && \
+    sudo rm install_omf 
+
+# 复制fish配置
+COPY packages/fish /home/${USERNAME}/.config/fish
+
 #安装前置依赖
 RUN pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
 
