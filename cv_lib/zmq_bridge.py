@@ -1,15 +1,10 @@
-"""_summary_
-@brief:
-    1.ImagePublish_t: 将图像通过共享内存和zmq发布到ros2桥接节点
-    2.ImageReceive_t: 将共享内存图像转化成cv2图像
-"""
 import cv2
 import zmq 
 import multiprocessing.shared_memory as shm
 import numpy as np
 import time
 import os
-class ImagePublish_t:
+class ImagePublish_t_zmq:
     """
         将opencv图像发布到ROS 2话题
         :param node: ROS 2节点对象
@@ -57,7 +52,7 @@ class ImagePublish_t:
             'timestamp': time.time(),
             'topic': self._topic,
         })
-class ImageReceive_t:
+class ImageReceive_t_zmq:
     """
     将共享内存图像转化成cv2图像
     :param socket: ZeroMQ连接地址
