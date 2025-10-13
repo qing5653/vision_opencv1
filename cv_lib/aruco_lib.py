@@ -63,7 +63,6 @@ class Aruco:
         maker = cv2.aruco.generateImageMarker(aruco_dict, ids, pix)
         cv2.imwrite(path,maker)
 
-
     def detect_image(self, input_data, aruco_type="DICT_5X5_1000", if_draw=True):
         """
         :param input_data: 可以是文件路径 (str) 或图像帧 (numpy数组)
@@ -104,28 +103,38 @@ class Aruco:
                     self._draw_marker(image, corner.reshape((4, 2)), marker_id)
 
         return image if if_draw else results
-    def update(self, image:np.ndarray,content:dict=None):
+    
+    def update(self, image: np.ndarray, timestamp: float = None, coordinate_system: str = None):
         """
         更新图像并检测 ArUco 标记
         :param image: OpenCV 图像对象 (np.ndarray)
-        :param content: 附加的内容，如时间戳、坐标系等
+        :param timestamp: 可选的时间戳
+        :param coordinate_system: 可选的坐标系标识
         """
         corners, ids, _ = self.detector.detectMarkers(image)
-
+    
         results = []
         if ids is not None:
-            # 保留原始 ids 的二维结构 (n, 1)
             for i in range(len(ids)):
-                marker_id = int(ids[i][0])  # 提取原始数值
+                marker_id = int(ids[i][0])
                 corner = corners[i].reshape((4, 2))
                 (topLeft, _, _, bottomRight) = corner
                 cX = int((topLeft[0] + bottomRight[0]) / 2)
                 cY = int((topLeft[1] + bottomRight[1]) / 2)
-                results.append({"id": marker_id, "cx": cX, "cy": cY, "corners": corner})
-
+            
+                results.append({
+                    "id": marker_id,
+                    "cx": cX,
+                    "cy": cY,
+                    "corners": corner,
+                    "timestamp": timestamp,
+                    "coordinate_system": coordinate_system
+                })
+            
                 if self.if_draw:
                     self._draw_marker(image, corner, marker_id)
-        content['corners'] = results
+    
+        return results
 
     def detect_video( self, 
                       use_camera=True, 
