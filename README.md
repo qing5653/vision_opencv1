@@ -21,3 +21,13 @@
 ### 对应四个文件夹下的均设置对应readme，可参照进行使用
 
 
+## 问题
+1.遇到显示界面崩溃问题的  
+暂定用如下方式，有点纯（后续优化）——补足部分依赖
+```bash
+sudo apt-get install nautilus
+```
+2.遇到无法找到模块解析路径问题(已解决)
+```bash
+export PYTHONPATH="/home/Elaina/yolo:$PYTHONPATH"
+```

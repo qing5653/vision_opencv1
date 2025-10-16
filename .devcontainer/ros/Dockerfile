@@ -40,3 +40,4 @@ RUN echo "source /opt/ros/humble/setup.bash" >> /home/${USERNAME}/.bashrc \
 ENV PYTHONPATH = /home/Elaina/yolo
 ENV PYTHONPATH = ~/yolo
 ENV PYTHONPATH = /home/Elaina/yolo/cv_lib
+
