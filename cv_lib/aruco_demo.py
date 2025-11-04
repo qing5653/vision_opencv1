@@ -27,7 +27,7 @@ pose_solver = PoseSolver(
 )
 
 # ================== 实时视频模式 ==================
-vs = VideoStream(src=4).start()  # 使用默认摄像头
+vs = VideoStream(src=0).start()  # 使用默认摄像头
 time.sleep(2.0)
 
 while True:
