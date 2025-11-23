@@ -7,9 +7,8 @@ package_name = 'vision_opencv'
 setup(
     name=package_name,
     version='0.0.0',
-    # 关键：显式指定需要包含的包（cv_lib和PoseSolver）
-    packages=find_packages(exclude=['test']) + ['cv_lib', 'PoseSolver'],
-    package_dir={'': '.'},  # 保持不变（模块从根目录查找）
+    packages=find_packages(exclude=['test']) + ['cv_lib', 'Solver'],
+    package_dir={'': '.'},
     data_files=[
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
@@ -28,10 +27,9 @@ setup(
     extras_require={'test': ['pytest']},
     entry_points={
         'console_scripts': [
-            'kfs_mapper = PoseSolver.kfs_mapper:main',
-            'aruco_detector_node = cv_lib.aruco_detector_node:main',  # 这里是对的
+            'kfs_mapper = Solver.kfs_mapper:main',
+            'aruco_detector_node = cv_lib.aruco_detector_node:main',
             'generate_aruco = cv_lib.generate_aruco:main',
-            'aruco_feedback_display = cv_lib.aruco_feedback_display:main',
             'qr_kfs_decoder = cv_lib.qr_kfs.qr_kfs_decoder:main',
             'qr_kfs_generator = cv_lib.qr_kfs.qr_kfs_generator:main',
         ],

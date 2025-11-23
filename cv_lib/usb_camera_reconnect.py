@@ -1,7 +1,6 @@
 import os
 import subprocess
 import time
-import rclpy
 
 class USBCameraReconnect:
     def __init__(self, node, camera_device="/dev/video10", usb_hub_pci="0000:00:14.0", sudo_password="qing"):
