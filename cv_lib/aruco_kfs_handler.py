@@ -15,7 +15,7 @@ CONFIG = {
     "aruco_type": "DICT_7X7_1000",
     "physical_size_cm": 15,
     "dpi": 300,
-    "save_dir": "./new_aruco_markers",
+    "save_dir": "./aruco_markers",
     "detected_save_dir": "./detected_aruco",
     "status_map": {"00": "空", "01": "R1KFS", "10": "R2KFS", "11": "假KFS"},
     "reverse_status_map": {"空": "00", "R1": "01", "R2": "10", "假": "11"},
@@ -24,7 +24,7 @@ CONFIG = {
     "stable_threshold": 3,
     "total_play_ms": 200,
     "final_pause_ms": 200,
-    "screen_size_inch": 15.6
+    "screen_size_inch": 16
 }
 
 # ------------------------------
@@ -86,13 +86,10 @@ class AsyncSaveThread:
 # ------------------------------
 class KFSArucoService:
     def __init__(self):
-        # 初始化Aruco检测器
         self.aruco_detector = Aruco(aruco_type=CONFIG["aruco_type"], if_draw=True)
-        # 状态管理
         self.marker_binaries = {1: None, 2: None, 3: None, 4: None}
         self.pos_states = {i: "未知" for i in range(1, 13)}
         self.unrecognized_counters = {i: 0 for i in range(1, 13)}
-        # 初始化异步保存线程
         self.async_saver = AsyncSaveThread(CONFIG["detected_save_dir"])
 
     def encode_states(self, input_states: list) -> list:
@@ -246,8 +243,7 @@ def main():
     print("输入：12个状态空格分隔 | 退出：按'q'")
     print(f"识别结果保存目录：{CONFIG['detected_save_dir']}")
     print("="*60)
-    
-    # 初始化服务
+ 
     service = KFSArucoService()
     
     # 1. 输入状态并编码
@@ -278,12 +274,23 @@ def main():
         return
     
     # 配置摄像头参数
+    cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'))
+    cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25)
+    cap.set(cv2.CAP_PROP_AUTO_WB, 0)
+    cap.set(cv2.CAP_PROP_GAIN, 0)
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, CONFIG["cam_w"])
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, CONFIG["cam_h"])
     cap.set(cv2.CAP_PROP_FPS, CONFIG["cam_fps"])
-    cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25)
-    cap.set(cv2.CAP_PROP_EXPOSURE, 30)
     cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+
+    # 验证参数是否生效
+    actual_w = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+    actual_h = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+    actual_fps = cap.get(cv2.CAP_PROP_FPS)
+    print(f"⚠️  摄像头实际参数：{actual_w:.0f}×{actual_h:.0f} @ {actual_fps:.0f}FPS")
+    if actual_fps < CONFIG["cam_fps"] * 0.8:
+        print(f"⚠️  警告：摄像头不支持{CONFIG['cam_fps']}FPS，实际仅{actual_fps:.0f}FPS")
+        CONFIG["cam_fps"] = int(actual_fps)
     
     # 摄像头预热
     for _ in range(10):
